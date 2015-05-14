@@ -48,7 +48,19 @@ public class OnFailureHandler extends DecisionHandler {
                     _commitItem.getParent().getBranchDescriptor().getCommitId(),
                     _commitItem.getMergedBranchName()
                     );
-        }
+        } else if(!_commitItem.getChildCommit().isEmpty()){
+        	CollectorApi.getEmailSender().notifyCommiter(
+        			_commitItem.getBranchDescriptor().getCommitId(),
+	                _commitItem.getStatus(),
+	                _commitItem.getBuildUrl(),
+	                "Verigreen Status - Failure",
+	                EmailSender.getFailedSignature(),
+	                _commitItem.getBranchDescriptor().getCommitter(),
+	                _commitItem.getBranchDescriptor().getProtectedBranch(),
+	                _commitItem.getChildCommit(),
+	                _commitItem.getMergedBranchName()
+	                );
+       }
         else {
         	CollectorApi.getEmailSender().notifyCommiter(
                     _commitItem.getBranchDescriptor().getCommitId(),
