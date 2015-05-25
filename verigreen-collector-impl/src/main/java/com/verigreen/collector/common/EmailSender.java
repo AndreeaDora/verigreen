@@ -123,7 +123,7 @@ public class EmailSender {
         {
             status.append(String.format("<tr><td>Merge failed between commits:<td> <b>%s</b> and <b>%s</b></td></td></tr>",parentCommitId.substring(0, 7),commitId.substring(0, 7)));
         } else if(parentCommitId != null) {
-        	status.append(String.format("<tr><td>New process Id:</td><td>eg_%s</td></tr>", parentCommitId));
+        	status.append(String.format("<tr><td>New process Id:</td><td>vg_%s</td></tr>", parentCommitId));
         } else
         {
         status.append(String.format("<tr><td>Commit Id:</td><td>%s</td></tr>", commitId.substring(0, 7)));
