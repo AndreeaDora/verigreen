@@ -1375,4 +1375,95 @@ public class TestCollectorE2EGreenPath extends SystemTestBase {
         	Assert.assertTrue(ex instanceof RestClientException);
         }
     }
+    
+    
+    @Test 
+    public void test2Users() throws IOException, InterruptedException {
+        String destinationFolderForNewFile = DEFAULT_COMMIT_FOLDER;
+        long timeoutForTestInMilis = 2000 * 60 * 3;
+        String commiterName1 = generateUserName();
+        String commiterEmail1 = generateEmailAddress();
+        String commiterName2 = generateUserName();
+        String commiterEmail2 = generateEmailAddress();
+        String newFileName1 = generateFileName();
+        String newFileName2 = generateFileName();
+        
+        addNewFile(
+                destinationFolderForNewFile + "/" + newFileName1,
+                "This is line number 1 in file1 !!!");
+        addNewFile(
+                destinationFolderForNewFile + "/" + newFileName2,
+                "This is line number 1 in file2 !!!");
+        
+        String content = getContent("getTriggerFailed");
+        setProtectedBranch(_masterBranch);
+        checkoutExistingBranch(_masterBranch);
+        String originJobName = getJobName();
+        changeConfigFileJobName("NotARealJobName");
+        
+        String commitId =
+        		commitAndPush(
+                        destinationFolderForNewFile,
+                        commiterName1,
+                        commiterEmail1,
+                        content,
+                        true,
+                        _masterBranch);
+             
+        String shortCommitId = processCommitId(commitId, commiterName1);
+        checkSuccessfulyProccesedCommitThatShouldFail(
+                VerigreenUtils.getVerigreenBranchName(shortCommitId),
+                _masterBranch,
+                timeoutForTestInMilis,
+                commitId,
+                commiterName1,
+                commiterEmail1,
+                content,
+                VerificationStatus.TRIGGER_FAILED,
+                true);
+
+        String masterBranchCurrentSHA1 =
+                ((JGitOperator) _sourceControlOperator).getRef(
+                        getBranchRefsRemotesFullName(_masterBranch)).getObjectId().getName();
+        
+        String content2 = getContent("testCommit");
+        checkoutExistingBranch(_masterBranch);
+        changeConfigFileJobName(originJobName);
+
+        String commitId2 =
+        		commitAndPush(
+                        destinationFolderForNewFile,
+                        commiterName2,
+                        commiterEmail2,
+                        content2,
+                        true,
+                        _masterBranch);
+        String shortCommitId2 = processCommitId(commitId2, commiterName2);
+        checkSuccessfulyProccesedCommitThatShouldPass(
+                VerigreenUtils.getVerigreenBranchName(shortCommitId2),
+                _masterBranch,
+                _timeoutForTestInMilis,
+                commitId2,
+                commiterName2,
+                commiterEmail2,
+                content2,
+                true);
+        
+        checkoutExistingBranch(_masterBranch);
+        //changeConfigFileJobName(originJobName);
+        setProtectedBranch(VerigreenUtils.getVerigreenBranchName(processCommitId(commitId, commiterName1)));
+        ((JGitOperator) _sourceControlOperator).reset(masterBranchCurrentSHA1);
+        _sourceControlOperator.push(_masterBranch, _masterBranch);
+        checkSuccessfulyProccesedCommitThatShouldFail(
+                VerigreenUtils.getVerigreenBranchName(shortCommitId),
+                _masterBranch,
+                timeoutForTestInMilis,
+                commitId,
+                commiterName1,
+                commiterEmail1,
+                content,
+                VerificationStatus.GIT_FAILURE,
+                true);
+        
+    }
 }
