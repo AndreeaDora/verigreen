@@ -1378,92 +1378,78 @@ public class TestCollectorE2EGreenPath extends SystemTestBase {
     
     
     @Test 
-    public void test2Users() throws IOException, InterruptedException {
+    public void testScenario() throws IOException, InterruptedException {
         String destinationFolderForNewFile = DEFAULT_COMMIT_FOLDER;
-        long timeoutForTestInMilis = 2000 * 60 * 3;
-        String commiterName1 = generateUserName();
-        String commiterEmail1 = generateEmailAddress();
-        String commiterName2 = generateUserName();
-        String commiterEmail2 = generateEmailAddress();
-        String newFileName1 = generateFileName();
-        String newFileName2 = generateFileName();
         
-        addNewFile(
-                destinationFolderForNewFile + "/" + newFileName1,
-                "This is line number 1 in file1 !!!");
-        addNewFile(
-                destinationFolderForNewFile + "/" + newFileName2,
-                "This is line number 1 in file2 !!!");
-        
-        String content = getContent("getTriggerFailed");
-        setProtectedBranch(_masterBranch);
-        checkoutExistingBranch(_masterBranch);
-        String originJobName = getJobName();
-        changeConfigFileJobName("NotARealJobName");
-        
-        String commitId =
-        		commitAndPush(
-                        destinationFolderForNewFile,
-                        commiterName1,
-                        commiterEmail1,
-                        content,
-                        true,
-                        _masterBranch);
-             
-        String shortCommitId = processCommitId(commitId, commiterName1);
-        checkSuccessfulyProccesedCommitThatShouldFail(
-                VerigreenUtils.getVerigreenBranchName(shortCommitId),
-                _masterBranch,
-                timeoutForTestInMilis,
-                commitId,
-                commiterName1,
-                commiterEmail1,
-                content,
-                VerificationStatus.TRIGGER_FAILED,
-                true);
-
         String masterBranchCurrentSHA1 =
                 ((JGitOperator) _sourceControlOperator).getRef(
                         getBranchRefsRemotesFullName(_masterBranch)).getObjectId().getName();
         
-        String content2 = getContent("testCommit");
+        String commiterName = generateUserName();
+        String commiterEmail = generateEmailAddress();
+        String content = getContent("test");
+        String[] branch = generateBranchNames(1);
+        
+        setProtectedBranch(_masterBranch);
         checkoutExistingBranch(_masterBranch);
-        changeConfigFileJobName(originJobName);
 
-        String commitId2 =
+        String commitId =
         		commitAndPush(
                         destinationFolderForNewFile,
-                        commiterName2,
-                        commiterEmail2,
-                        content2,
+                        commiterName,
+                        commiterEmail,
+                        content,
                         true,
                         _masterBranch);
-        String shortCommitId2 = processCommitId(commitId2, commiterName2);
-        checkSuccessfulyProccesedCommitThatShouldPass(
-                VerigreenUtils.getVerigreenBranchName(shortCommitId2),
-                _masterBranch,
-                _timeoutForTestInMilis,
-                commitId2,
-                commiterName2,
-                commiterEmail2,
-                content2,
-                true);
         
-        checkoutExistingBranch(_masterBranch);
-        //changeConfigFileJobName(originJobName);
-        setProtectedBranch(VerigreenUtils.getVerigreenBranchName(processCommitId(commitId, commiterName1)));
-        ((JGitOperator) _sourceControlOperator).reset(masterBranchCurrentSHA1);
-        _sourceControlOperator.push(_masterBranch, _masterBranch);
-        checkSuccessfulyProccesedCommitThatShouldFail(
+        String shortCommitId = processCommitId(commitId, commiterName);
+        checkSuccessfulyProccesedCommitThatShouldPass(
                 VerigreenUtils.getVerigreenBranchName(shortCommitId),
                 _masterBranch,
-                timeoutForTestInMilis,
+                _timeoutForTestInMilis,
                 commitId,
-                commiterName1,
-                commiterEmail1,
+                commiterName,
+                commiterEmail,
+                content,
+                true);
+        
+        ((JGitOperator) _sourceControlOperator).reset(masterBranchCurrentSHA1);
+        createAndPushBranches(branch);
+        checkoutExistingBranch(branch[0]);
+        
+        		commitAndPush(
+                        destinationFolderForNewFile,
+                        commiterName,
+                        commiterEmail,
+                        content,
+                        true,
+                        true,
+                        branch[0]);
+        
+        checkoutExistingBranch(_masterBranch);
+        _sourceControlOperator.merge(_masterBranch,_masterBranch);
+        _sourceControlOperator.merge(_masterBranch, branch[0]);
+          
+        String commitId3 =
+        		commitAndPush(
+                        destinationFolderForNewFile,
+                        commiterName,
+                        commiterEmail,
+                        content,
+                        true,
+                        _masterBranch);
+      
+        String shortCommitId3 = processCommitId(commitId3, commiterName);
+        
+        checkSuccessfulyProccesedCommitThatShouldFail(
+                VerigreenUtils.getVerigreenBranchName(shortCommitId3),
+                _masterBranch,
+                _timeoutForTestInMilis,
+                commitId3,
+                commiterName,
+                commiterEmail,
                 content,
                 VerificationStatus.GIT_FAILURE,
                 true);
-        
     }
 }
