@@ -30,6 +30,7 @@ import com.verigreen.spring.common.CollectorApi;
 public class CallJenkinsJob implements Job {
 
 	JenkinsUpdater jenkinsUpdater = JenkinsUpdater.getInstance();
+	CommitItemVerifier commitItemVerifier = CommitItemVerifier.getInstance(); 
 	
 	public CallJenkinsJob(){}
 	@Override
@@ -48,15 +49,16 @@ public class CallJenkinsJob implements Job {
 	}
 
 	private void calllingJenkinsForCreate() {
+		List<CommitItem> createCommitItems = commitItemVerifier.getCommitItems();
 		
-		for( int i = 0; i < CommitItemVerifier.createCommitItems.size(); i++) {
+		for( int i = 0; i < createCommitItems.size(); i++) {
 			
-	          JenkinsVerifier.triggerJob(CommitItemVerifier.createCommitItems.get(i));
-	          jenkinsUpdater.register(CommitItemVerifier.createCommitItems.get(i));
+	          JenkinsVerifier.triggerJob(createCommitItems.get(i));
+	          jenkinsUpdater.register(createCommitItems.get(i));
 	          
 		}
 		
-		CommitItemVerifier.createCommitItems.clear();
+		createCommitItems.clear();
 	}
 
 	private RestClientResponse createRestCall(String param) {
@@ -113,7 +115,7 @@ public class CallJenkinsJob implements Job {
 				 values.add(buildNumber);
 				 values.add(jenkinsResult);
 				 
-				 String timestamp = childJsonObject.get("timestamp").getAsString();
+				 //String timestamp = childJsonObject.get("timestamp").getAsString();
 						 
 				 //buildsAndStatusesMap.put(buildNumber,jenkinsResult);
 				 
@@ -160,6 +162,4 @@ public class CallJenkinsJob implements Job {
 		}
 		return relevantObservers;
 	}
-
-	
 }
