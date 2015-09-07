@@ -44,6 +44,10 @@ public class CommitItem extends UUIDEntity implements Comparable<CommitItem>, Ob
     private int _buildNumber;
     private boolean _isDone = false;
     private String _childCommit = "";
+    private int _timeoutCounter = 0;
+	private int _retriableCounter = 0; 
+    
+    private boolean _triggeredAttempt = false;
     
     public CommitItem() {}
     
@@ -57,6 +61,21 @@ public class CommitItem extends UUIDEntity implements Comparable<CommitItem>, Ob
         
         return EMPTY.equals(value);
     }
+    public int getTimeoutCounter() {
+		return _timeoutCounter;
+	}
+
+	public void setTimeoutCounter(int timeoutCounter) {
+		this._timeoutCounter = timeoutCounter;
+	}
+
+	public int getRetriableCounter() {
+		return _retriableCounter;
+	}
+
+	public void setRetriableCounter(int retriableCounter) {
+		this._retriableCounter = retriableCounter;
+	}
     
     public VerificationStatus getStatus() {
         
@@ -200,19 +219,6 @@ public class CommitItem extends UUIDEntity implements Comparable<CommitItem>, Ob
         return _creationTime.compareTo(item.getCreationTime());
     }
 	
-	@Override
-	public void updateBuildNumber(int build) {
-		
-		this.setBuildNumber(build);
-		
-	}
-	
-	@Override
-	public void updateBuildUrl(URI buildUrl) {
-		
-		this.setBuildUrl(buildUrl);
-		
-	}
     
 	@Override
 	public void update(VerificationStatus status) {
@@ -221,11 +227,20 @@ public class CommitItem extends UUIDEntity implements Comparable<CommitItem>, Ob
 		
 	}
 	
+	public boolean isTriggeredAttempt() {
+		return _triggeredAttempt;
+	}
+	
+	public void setTriggeredAttempt(boolean triggeredAttempt) {
+		this._triggeredAttempt = triggeredAttempt;
+	}
+	
     @Override
     public String toString() {
         
         return String.format(
-                "CommitItem [\n\t_branchDescriptor=%s,\n\t_mergedBranchName=%s, _status=%s, _creationTime=%s, _runTime=%s, _endTime=%s, _buildUrl=%s, _isDone=%s, _parent=%s, _child=%s]",
+                "CommitItem [\n\t_branchDescriptor=%s,\n\t_mergedBranchName=%s, _status=%s, _creationTime=%s, _runTime=%s, _endTime=%s, _buildUrl=%s, _isDone=%s, _parent=%s, _child=%s, "
+                + "_timeoutCounter=%s, _retriableCounter=%s, _triggeredAttempt=%s]",
                 _branchDescriptor,
                 _mergedBranchName,
                 _status,
@@ -235,7 +250,11 @@ public class CommitItem extends UUIDEntity implements Comparable<CommitItem>, Ob
                 _buildNumber,
                 _isDone,
                 _parent != null ? _parent.getKey() : null,
-                _child != null ? _child.getKey() : null);
+                _child != null ? _child.getKey() : null,
+        		_timeoutCounter,
+        		_retriableCounter,
+        		_triggeredAttempt);
+        		
     }
 
 	

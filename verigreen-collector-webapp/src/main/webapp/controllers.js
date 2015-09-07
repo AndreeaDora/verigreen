@@ -30,11 +30,11 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 	$scope.number = /^\d+$/;
 	$scope.time = "30";
 	$scope.checklist = true;
-	$scope.color = "#A8A8A8";
+	$scope.color = "#ffffff";
 	
 	$scope.getValueFilter = function(column) {
 		if($cookieStore.get(column) == true) {
-			  $scope.colorFilter = "#0088CC";
+			  $scope.colorFilter = "#8eb924";
 			  return false;
 		  }
 		  else {
@@ -51,18 +51,17 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
     	if($cookieStore.get('Id') == true || $cookieStore.get('ProtectedBranch') == true || $cookieStore.get('ParentBranch') == true || 
     			$cookieStore.get('Committer') == true || $cookieStore.get('Status') == true || $cookieStore.get('Retry') == true || $cookieStore.get('CreationTime') == true ||
     			$cookieStore.get('RunTime') == true || $cookieStore.get('EndTime') == true || $cookieStore.get('BuildUrl') == true) {
-    		 $scope.colorFilter = "#0088CC";
+    		 $scope.colorFilter = "#8eb924";
     	}
     	else {
-    		 $scope.colorFilter = "#A8A8A8";
+    		 $scope.colorFilter = "#868686";
     	}
     };
     
     $scope.toogle = function() {
   		$scope.check =!$scope.check;
   		if($scope.check == true){
-  			$scope.color = "#0088CC";
-  			$scope.cols = 450;
+  			$scope.color = "#8eb924";
   			$cookies.time = $scope.time;
   			$scope.refresh();
 			$scope.clicked = [];
@@ -76,8 +75,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
   			},$scope.time*1000);
   		}
   		else if($scope.check == false){
-  			$scope.color = "#A8A8A8";
-  			$scope.cols = 330;
+  			$scope.color = "#ffffff";
   			$cookies.time = "0";
   			$interval.cancel(timer);
             timer=undefined;
@@ -99,8 +97,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
       
     $scope.autoreload = function() {
   		if($cookies.time > 0) {
-  			$scope.color = "#0088CC";
-  			$scope.cols = 450;
+  			$scope.color = "#8eb924";
   			$scope.check = true;
   			$scope.time = $cookies.time;
   			timer = $interval(function(){
@@ -154,6 +151,16 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 		else {
 			$scope.menuOptions = null;
 		}
+	};
+	
+	function showModalWindow() {
+		    ModalService.showModal({
+		      templateUrl: "modal.html",
+		      controller: "ModalController",
+		    }).then(function(modal) {
+		      modal.element.modal();
+		      modal.close();
+		    });
 	};
 
 	var searchMatch = function(haystack, needle) {
@@ -277,19 +284,21 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 		}
 	};
 
-	$scope.getColor = function(status) {
-
-		var ret = 'black';
+	$scope.getImage = function(status) {
+		var image = "verigreen-status_not_started.png";
 		if (status == 'PASSED_BY_CHILD' || status == 'PASSED_AND_PUSHED') {
-			ret = 'green';
+			image = "verigreen-status_pass.png";
 		} else if (status == 'FAILED_AND_PUSHED' || status == 'FORCING_PUSH') {
-			ret = 'FF6600';
+			image = "verigreen-status_failed_and_push.png";
 		} else if (status != 'RUNNING' && status != 'NOT_STARTED' && status != 'PASSED') {
-			ret = 'red';
+			image = "verigreen-status_failed.png";
+		} else if (status == 'RUNNING' || status == 'PASSED') {
+			image = "verigreen-status_running.gif";
 		}
-		return ret;
+		
+		return image;
 	};
-
+	
 	$scope.button  = function(status,commitId,mode,runTime,endTime) {
 		if($scope.clicked.length != 0){
 		for (var d = 0, len = $scope.clicked.length; d < len; d++) {
@@ -341,16 +350,6 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 	               alert('err');
 	        });
 	 };
-	 
-	 function showModalWindow() {
-		    ModalService.showModal({
-		      templateUrl: "modal.html",
-		      controller: "ModalController",
-		    }).then(function(modal) {
-		      modal.element.modal();
-		      modal.close();
-		    });
-	  };
 	  
 	  $scope.historyResource = function() {
 		  $http({

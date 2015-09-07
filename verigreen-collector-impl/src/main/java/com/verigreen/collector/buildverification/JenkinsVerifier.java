@@ -37,8 +37,8 @@ import com.verigreen.collector.spring.CollectorApi;
 import com.verigreen.common.concurrency.RuntimeUtils;
 import com.verigreen.common.utils.LocalMachineCurrentTimeProvider;
 import com.verigreen.common.utils.RetriableOperationExecutor;
-import com.verigreen.common.utils.StringUtils;
 import com.verigreen.common.utils.RetriableOperationExecutor.RetriableOperation;
+import com.verigreen.common.utils.StringUtils;
 
 public class JenkinsVerifier implements BuildVerifier {
     
@@ -51,7 +51,10 @@ public class JenkinsVerifier implements BuildVerifier {
     private int INITIAL_SLEEP_MILLIS;
     private int MAX_SLEEP_TIME;
 
-    JenkinsUpdater jenkinsUpdater = JenkinsUpdater.getInstance();
+    private static Job job2Verify = getJobToVerify();
+    
+    
+    static JenkinsUpdater jenkinsUpdater = JenkinsUpdater.getInstance();
 
     
     public int getDEFAULT_COUNT() {
@@ -77,6 +80,68 @@ public class JenkinsVerifier implements BuildVerifier {
 	public void setMAX_SLEEP_TIME(int mAX_SLEEP_TIME) {
 		MAX_SLEEP_TIME = mAX_SLEEP_TIME;
 	}
+	
+	private static int getJobRetryCounter()
+	{
+		int jobRetry = Integer.parseInt(VerigreenNeededLogic.properties.getProperty("job.retry.counter"));
+		return jobRetry;
+	}
+	
+	private static Job getJobToVerify()
+	{
+		Job jobToVerify =  null;
+		int jobRetries = getJobRetryCounter();
+		int retries = 1;
+		while(retries < jobRetries + 1)
+		{
+		try {
+			VerigreenLogger.get().log(
+	                JenkinsVerifier.class.getName(),
+	                RuntimeUtils.getCurrentMethodName(),
+	                String.format(
+	                        "Attempting to retrieve job for verification...", retries));
+			jobToVerify = CollectorApi.getJenkinsServer().getJob((CollectorApi.getVerificationJobName().toLowerCase()));	
+		}
+		catch (IOException e) 
+		{		
+			VerigreenLogger.get().error(
+                    JenkinsVerifier.class.getName(),
+                    RuntimeUtils.getCurrentMethodName(),
+                    String.format(
+                            "Failed get job for verification"),e);
+		}
+		finally
+		{
+			if(jobToVerify != null)
+			{
+				VerigreenLogger.get().log(
+	                    JenkinsVerifier.class.getName(),
+	                    RuntimeUtils.getCurrentMethodName(),
+	                    String.format(
+	                            "Job for verification was retrieved successfully after [%s] retries", retries));
+				break;
+			}
+			else
+			{
+				VerigreenLogger.get().log(
+	                    JenkinsVerifier.class.getName(),
+	                    RuntimeUtils.getCurrentMethodName(),
+	                    String.format(
+	                            "Failed to retrieve job for verification. Retrying..."));
+				retries++;
+			}
+		}
+		}
+		if(jobToVerify == null)
+		{
+			VerigreenLogger.get().error(
+                    JenkinsVerifier.class.getName(),
+                    RuntimeUtils.getCurrentMethodName(),
+                    String.format(
+                            "Failed get job for verification after [%s] retries", retries - 1));
+		}
+		return jobToVerify;
+	}
     private CommitItem getCurrentCommitItem(String branchName)
     {
     	List<CommitItem> all = CollectorApi.getCommitItemContainer().getAll();
@@ -90,23 +155,29 @@ public class JenkinsVerifier implements BuildVerifier {
     	}
 		return null;
     }
-
     
     public static void triggerJob(CommitItem commitItem) {
-    	 String branchName = commitItem.getMergedBranchName(); 
-    	 Map<String, Job> jobs = null;
+    	
+    	String branchName = commitItem.getMergedBranchName();
+
 		try {
-			 jobs = CollectorApi.getJenkinsServer().getJobs();
-	         Job job2Verify = jobs.get(CollectorApi.getVerificationJobName().toLowerCase());
+	         VerigreenLogger.get().log(RuntimeUtils.class.getName(),
+	        		 RuntimeUtils.getCurrentMethodName(),
+	        		 String.format("Triggering job [%s] for branch [%s]", job2Verify.getName(), branchName));
 			 Map<String,String> commitParams = VerigreenNeededLogic.checkJenkinsMode(commitItem);
-			 ImmutableMap.Builder<String, String> finalJenkinsParams = ImmutableMap.<String, String>builder().put(CollectorApi.getBranchParamName(), branchName);
+			 commitItem.setTriggeredAttempt(true);
+			 jenkinsUpdater.register(commitItem);
+			 ImmutableMap.Builder<String, String> finalJenkinsParams = ImmutableMap.<String, String>builder().put("token",VerigreenNeededLogic.properties.getProperty("jenkins.password"));
+			 finalJenkinsParams.put(CollectorApi.getBranchParamName(), branchName);
 	         for(String key : commitParams.keySet())
 	         {
 	         	finalJenkinsParams.put(key,commitParams.get(key));
 	         }
 	          final ImmutableMap<String, String> params = finalJenkinsParams.build();
 	          job2Verify.build(params);
+	         
 		} catch (IOException e) {
+		
 			VerigreenLogger.get().error(
                     JenkinsVerifier.class.getName(),
                     RuntimeUtils.getCurrentMethodName(),
@@ -114,27 +185,16 @@ public class JenkinsVerifier implements BuildVerifier {
                             "Failed to trigger build for job [%s] with branch [%s]",
                             CollectorApi.getVerificationJobName(),
                             branchName),e);
-		}
+		} 
     }
-    
-    public static String getBuildUrl(int buildNumber) {
-		
-    	Map<String, Job> jobs = null;
+	 
+
+ public static String getBuildUrl(int buildNumber) {
+
     	String buildUrl = null;
-		try {
-			jobs = CollectorApi.getJenkinsServer().getJobs();
-			Job job2Verify = jobs.get(CollectorApi.getVerificationJobName().toLowerCase());
-			buildUrl = job2Verify.details().getBuildByNumber(buildNumber).getUrl();
-			} catch (IOException e) {
-				VerigreenLogger.get().error(
-	                    JenkinsVerifier.class.getName(),
-	                    RuntimeUtils.getCurrentMethodName(),
-	                    String.format(
-	                            "Failed to retriev build URL"),e);
-			}
+		buildUrl = job2Verify.getUrl()+Integer.toString(buildNumber)+"/";
     	
     	return buildUrl;
-    	
     }
     
     @Override

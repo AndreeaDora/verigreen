@@ -35,26 +35,34 @@ public class CommitItemVerifier {
     private int _pollTimeMillis = 10 * 1000;
     private String _commitItemKey = StringUtils.EMPTY_STRING;
     private List<CommitItem> createCommitItems = new ArrayList<>();
-    private static CommitItemVerifier instance = null;
+    private static volatile CommitItemVerifier instance = null;
     
 	protected CommitItemVerifier() {
 	      // Exists only to defeat instantiation.
 	}
 	
-	public static CommitItemVerifier getInstance() {
-		if(instance == null) {
-			instance = new CommitItemVerifier();
-	    }
-	    return instance;
-	}
+	public static CommitItemVerifier getInstance()
+    { 
+    	if(instance == null)
+    	{
+    		synchronized(CommitItemVerifier.class)
+    		{ 
+    			if(instance == null)
+    			{ 
+    				instance = new CommitItemVerifier();  
+    			}
+    		}
+    	}
+    	return instance; 
+    }
     
     public void verify(final CommitItem item) {
-        
-       /*_commitItemKey = item.getKey();
-        final Future<BuildVerificationResult> future =
+        CommitItem itemFromContainer = CollectorApi.getCommitItemContainer().get(item.getKey());
+       _commitItemKey = itemFromContainer.getKey();
+       /* final Future<BuildVerificationResult> future =
                 verifyAsync("origin/" + item.getMergedBranchName());*/
         
-        createCommitItems.add(item);
+        createCommitItems.add(itemFromContainer);
         
         /*ExecutorServiceFactory.fireAndForget(new Runnable() {
             
@@ -78,7 +86,7 @@ public class CommitItemVerifier {
             VerigreenLogger.get().log(
                     getClass().getName(),
                     RuntimeUtils.getCurrentMethodName(),
-                    String.format("cancelling verification of %s...", commitItem));
+                    String.format("Cancelling verification of %s... \n If stopping the build failed, the job could have been done prior to this moment.", commitItem));
             CollectorApi.getJenkinsVerifier().stop(
                     CollectorApi.getVerificationJobName(),
                     String.valueOf(commitItem.getBuildNumber()));

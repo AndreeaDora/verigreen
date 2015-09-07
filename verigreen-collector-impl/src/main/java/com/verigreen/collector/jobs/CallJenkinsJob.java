@@ -1,7 +1,10 @@
 package com.verigreen.collector.jobs;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -11,15 +14,18 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
-import com.verigreen.collector.buildverification.CommitItemVerifier;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.verigreen.collector.api.VerificationStatus;
+import com.verigreen.collector.buildverification.CommitItemVerifier;
 import com.verigreen.collector.buildverification.JenkinsUpdater;
 import com.verigreen.collector.buildverification.JenkinsVerifier;
 import com.verigreen.collector.common.VerigreenNeededLogic;
 import com.verigreen.collector.common.log4j.VerigreenLogger;
 import com.verigreen.collector.model.CommitItem;
+import com.verigreen.collector.model.MinJenkinsJob;
 import com.verigreen.collector.observer.Observer;
 import com.verigreen.common.concurrency.RuntimeUtils;
 import com.verigreen.restclient.RestClientImpl;
@@ -30,17 +36,20 @@ import com.verigreen.spring.common.CollectorApi;
 public class CallJenkinsJob implements Job {
 
 	JenkinsUpdater jenkinsUpdater = JenkinsUpdater.getInstance();
-	CommitItemVerifier commitItemVerifier = CommitItemVerifier.getInstance(); 
+	JenkinsVerifier jenkinsVerifier = new JenkinsVerifier();
+	private int _maximumRetries = getNumberOfRetriesCounter();
+	private int _maximumTimeout = getTriggerTimeoutCounter();
+	private long _timeOutInMillies = getTimeoutInMillies();
+	
 	
 	public CallJenkinsJob(){}
 	@Override
 	public void execute(JobExecutionContext context)
 			throws JobExecutionException {
 
-		calllingJenkinsForCreate();
 		calllingJenkinsForUpdate();
+		calllingJenkinsForCreate();
 		calllingJenkinsForCancel();
-
 	}
 
 	private void calllingJenkinsForCancel() {
@@ -48,118 +57,289 @@ public class CallJenkinsJob implements Job {
 		
 	}
 
+	private int getTriggerTimeoutCounter()
+	{
+		int counterTimeout = Integer.parseInt(VerigreenNeededLogic.properties.getProperty("timeout.counter"));
+		return counterTimeout;
+
+	}
+	
+	private int getNumberOfRetriesCounter()
+	{
+		int counterRetries = Integer.parseInt(VerigreenNeededLogic.properties.getProperty("default_count"));
+		return counterRetries;
+	}
+	private long getTimeoutInMillies()
+	{
+		int timeoutInMillies = Integer.parseInt(VerigreenNeededLogic.properties.getProperty("jenkins.timeoutInSeconds"));
+		timeoutInMillies = timeoutInMillies * 1000;
+		return timeoutInMillies;
+	}
+	
 	private void calllingJenkinsForCreate() {
-		List<CommitItem> createCommitItems = commitItemVerifier.getCommitItems();
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method started");
+
+
 		
-		for( int i = 0; i < createCommitItems.size(); i++) {
+		for (Iterator<CommitItem> iterator = CommitItemVerifier.getInstance().getCommitItems().iterator(); iterator.hasNext();) {
+			CommitItem ci = iterator.next();
+			iterator.remove();
+			JenkinsVerifier.triggerJob(com.verigreen.collector.spring.CollectorApi.getCommitItemContainer().get(ci.getKey()));
 			
-	          JenkinsVerifier.triggerJob(createCommitItems.get(i));
-	          jenkinsUpdater.register(createCommitItems.get(i));
-	          
+			// Remove the current element from the iterator and the list.
+	        
 		}
-		
-		createCommitItems.clear();
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method ended");
 	}
 
 	private RestClientResponse createRestCall(String param) {
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method started");
 		String jenkinsUrl = VerigreenNeededLogic.properties.getProperty("jenkins.url");
 		String jobName = VerigreenNeededLogic.properties.getProperty("jenkins.jobName");
 		
 		RestClientResponse result = new RestClientImpl().get(CollectorApi.getJenkinsCallRequest(jenkinsUrl, jobName, param));
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method ended");
 		return result;
 	}
 
 	private void calllingJenkinsForUpdate() {
 
+		String result;
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method started");
+		int sizeObservers = jenkinsUpdater.getObservers().size();
+		VerigreenLogger.get().log(
+	             getClass().getName(),
+	             RuntimeUtils.getCurrentMethodName(),
+	             String.format(
+	                     "Jenkins called for update on [%s] not updated items...",
+	                     sizeObservers ));
+		
+		if (sizeObservers > 0){
 			RestClientResponse response = createRestCall("api/json?depth=1&pretty=true&tree=builds[number,result,building,timestamp,actions[parameters[value]]]");
-			String result = response.getEntity(String.class);
-			
+			result = response.getEntity(String.class);
 			try {
-				Map<String, List<String>> parsedResults = parsingJSON(result);
-			
+				Map<String, MinJenkinsJob> parsedResults = parsingJSON(result);
+				
 				List<Observer> analyzedResults = analyzeResults(parsedResults);
 				
-				VerigreenLogger.get().log(
-			             getClass().getName(),
-			             RuntimeUtils.getCurrentMethodName(),
-			             String.format(
-			                     "Jenkins called for update on [%s] not updated items...",
-			                     analyzedResults.size()));
-
+				
 				if(!analyzedResults.isEmpty())
 				{
-					jenkinsUpdater.notifyObserver(analyzedResults, parsedResults);
+					/*jenkinsUpdater.notifyObserver(analyzedResults, parsedResults);*/
+					jenkinsUpdater.notifyObserver(jenkinsUpdater.setObserversStatus(analyzedResults, parsedResults));
 				}
 			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}		
-	
+				VerigreenLogger.get().error(
+			             getClass().getName(),
+			             RuntimeUtils.getCurrentMethodName(),
+			             "Bad JSON response: " + result);//for security reasons - remove the result from the exception.
+			}
+		}
+		
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method ended");
+		
 	}
-	private Map<String, List<String>> parsingJSON(String json) throws JSONException
-	{	
-		Map<String, List<String>> buildsAndStatusesMap = new HashMap<String, List<String>>();
+	private Map<String, MinJenkinsJob> parsingJSON(String json) throws JSONException {
+		
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method started");
+		Map<String, MinJenkinsJob> buildsAndStatusesMap = new HashMap<String, MinJenkinsJob>();
 		JsonParser parser = new JsonParser();
 		JsonObject mainJson = (JsonObject) parser.parse(json);
 		
-		JsonObject parameterJsonObjectArray;
+		JsonObject parameterJsonObjectArray = null;
 
 		JsonArray jsonBuildsArray = mainJson.getAsJsonArray("builds");
 		for (int i = 0; i < jsonBuildsArray.size(); i++) 
 		{  // **line 2**
 				 JsonObject childJsonObject = (JsonObject) jsonBuildsArray.get(i);
 				 String buildNumber = childJsonObject.get("number").getAsString();
-				 String jenkinsResult = childJsonObject.get("result").getAsString();
 				 
-				 List<String> values = new ArrayList<>();
-				 values.add(buildNumber);
-				 values.add(jenkinsResult);
+				 MinJenkinsJob values = new MinJenkinsJob();
+				 values.setBuildNumber(buildNumber);
+				 if (childJsonObject.get("result") instanceof JsonNull){
+					 values.setJenkinsResult("null");
+				 }
+				 else
+				 {
+					 values.setJenkinsResult(childJsonObject.get("result").getAsString());
+				 }				 
 				 
-				 //String timestamp = childJsonObject.get("timestamp").getAsString();
+//				 String timestamp = childJsonObject.get("timestamp").getAsString();
+
 						 
 				 //buildsAndStatusesMap.put(buildNumber,jenkinsResult);
 				 
 				 JsonArray actionsJsonArray = childJsonObject.get("actions").getAsJsonArray();
 				 
-				 if(((JsonObject)actionsJsonArray.get(0)).getAsJsonArray("parameters")!= null) {
-					 parameterJsonObjectArray = (JsonObject) actionsJsonArray.get(0);
-				 } else {
-					 parameterJsonObjectArray = (JsonObject) actionsJsonArray.get(1);
-				 }
-				 
+				 parameterJsonObjectArray = checkForParameters(actionsJsonArray);
+				
 				 JsonArray jsonParametersArray =  parameterJsonObjectArray.getAsJsonArray("parameters");
 				 
 				 JsonObject parameterJsonObject = (JsonObject) jsonParametersArray.get(0);
 				 
-				 String branch = parameterJsonObject.get("value").getAsString();
+				 values.setBranchName(parameterJsonObject.get("value").getAsString());
 				 
-				 buildsAndStatusesMap.put(branch, values);
-				 
-					 
-					 /*if(parameterJsonObject.get("name").getAsString().equals("status"))
-					 {
-						 String resultStatus = parameterJsonObject.get("value").getAsString();
-						 VerificationStatus status = convertToVerifStatusFromString(resultStatus);
-						 buildsAndStatusesMap.put(buildNumber, status);
-						 break;
-					 }*/		
+				 buildsAndStatusesMap.put(values.getBranchName(), values);	
 				 
 		}
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method ended");
 		return buildsAndStatusesMap;
 	}
-
 	
-	private List<Observer> analyzeResults(Map<String, List<String>> parsedResults)
+	private JsonObject checkForParameters(JsonArray array)
 	{
+		JsonObject result = null;
+		for(int j = 0 ; j < array.size() ; j ++)
+		 {
+			 if(((JsonObject)array.get(j)).getAsJsonArray("parameters")!= null) 
+			 {
+				 result =  (JsonObject) array.get(j);
+				 break;
+			 }
+		 }
+		return result;
+	}
+	
+	private void checkTriggerAndRetryMechanism(Observer observer)
+	{
+		/*TODO check the observer, if the observer (CommitItem) doesn't have _buildnumber 
+		 * then check the parsedResults, and if there is no value calculate timeout.
+		 * this method will do:
+		 * 1) if both counters reaches their limits if so = trigger failed
+		 * 	  if timeoutConter didn't reach the limit then:
+			 * 		++timeoutcounter
+			 * 		change the triggerAtemoted to false
+			 * 		unregister the observer from subject (update)
+			 * 		adding it (commitItem) to the commitItemVerifier list. 
+			 * else
+		 * 			++triggercounter;
+		 * 			timeoutCounter = 0;
+		 * unregister the observer from subject (update)
+			 * 		adding it (commitItem) to the commitItemVerifier list.
+		*/
+		/*if(!parsedResults.get(((CommitItem)observer).getMergedBranchName()).equals("null"))
+		{
+			relevantObservers.add(observer);
+		}*/
+		
+
+		int retriableCounter = ((CommitItem)observer).getRetriableCounter();
+		int timeoutCounter = ((CommitItem)observer).getTimeoutCounter();
+
+		
+		if(timeoutCounter >= _maximumTimeout && retriableCounter >= _maximumRetries)
+		{
+			((CommitItem)observer).setStatus(VerificationStatus.TRIGGER_FAILED);
+			jenkinsUpdater.unregister(observer);
+			com.verigreen.collector.spring.CollectorApi.getCommitItemContainer().save(((CommitItem)observer));
+			//TODO save the commit item
+			jenkinsVerifier.stop(VerigreenNeededLogic.properties.getProperty("jenkins.jobName"), Integer.toString(((CommitItem)observer).getBuildNumber()));
+		}
+		else if(((CommitItem)observer).getTimeoutCounter() < _maximumTimeout)
+		{
+
+			timeoutCounter++;
+			((CommitItem)observer).setTimeoutCounter(timeoutCounter);
+			//commitItem.setTriggeredAttempt(false);
+			
+			//jenkinsUpdater.unregister(observer);
+			//CommitItemVerifier.getInstance().getCommitItems().add(commitItem);
+			//jenkinsVerifier.stop(VerigreenNeededLogic.properties.getProperty("jenkins.jobName"), Integer.toString(commitItem.getBuildNumber()));
+			}
+		else{
+
+			retriableCounter++;
+			((CommitItem)observer).setRetriableCounter(retriableCounter);
+			
+			((CommitItem)observer).setTimeoutCounter(0);
+			
+			//jenkinsUpdater.unregister(observer);
+			//CommitItemVerifier.getInstance().getCommitItems().add(commitItem);
+			//jenkinsVerifier.stop(VerigreenNeededLogic.properties.getProperty("jenkins.jobName"), Integer.toString(commitItem.getBuildNumber()));
+		}
+	}
+	
+	private boolean checkForTimeout(CommitItem ci)
+	{
+		/*VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method started");*/
+		//boolean ans = false;
+		return System.currentTimeMillis() - ci.getRunTime().getTime() > _timeOutInMillies;
+		/*long diffInMillies = ci.getRunTime().getTime() - ci.getCreationTime().getTime();
+		   
+		if(diffInMillies > _timeOutInMillies)
+		{
+			ans = true;
+		}	
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method ended");
+		return ans;*/
+	}
+	private List<Observer> analyzeResults(Map<String, MinJenkinsJob> parsedResults){
+		
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method started");
 		List<Observer> observers =  jenkinsUpdater.getObservers();
 		List<Observer> relevantObservers = new ArrayList<Observer>();
 		for(Observer observer : observers)
 		{
-			if(!parsedResults.get(((CommitItem)observer).getMergedBranchName()).equals("null"))
-			{
-				relevantObservers.add(observer);
+			try {
+				//the default build url for an untriggered item is 0, also check for null value in the parsed results, that means that 
+				//the MinJenkinsJob didn't get any response for that particular commit item 
+				/*if(parsedResults.get(((CommitItem)observer).getMergedBranchName()).equals("null"))
+				{
+					checkTriggerAndRetryMechanism(observer);
+				}
+				else */
+			
+				boolean hasTimedOut = checkForTimeout((CommitItem)observer);
+				if(hasTimedOut)
+				{
+					observer.update(VerificationStatus.TIMEOUT);
+					jenkinsUpdater.unregister(observer);
+					com.verigreen.collector.spring.CollectorApi.getCommitItemContainer().save((CommitItem)observer);
+				}
+				if(((CommitItem)observer).getBuildNumber() == 0)
+				{
+					if(parsedResults.get(((CommitItem)observer).getMergedBranchName()) == null)
+					{//we don't have a build number and no result from Jenkins -- we need to check the retry and trigger mechanism
+						//jenkinsUpdater.unregister(observer);
+						checkTriggerAndRetryMechanism(observer);				
+					}
+					else /*if(parsedResults.get(((CommitItem)observer).getMergedBranchName()).getJenkinsResult().equals("null"))*/
+					{//we don't have a build number but the observer is running
+						((CommitItem)observer).setBuildNumber(Integer.parseInt(parsedResults.get(((CommitItem)observer).getMergedBranchName()).getBuildNumber()));
+						((CommitItem)observer).setBuildUrl(new URI (JenkinsVerifier.getBuildUrl(Integer.parseInt(parsedResults.get(((CommitItem)observer).getMergedBranchName()).getBuildNumber()))));
+						
+						com.verigreen.collector.spring.CollectorApi.getCommitItemContainer().save(((CommitItem)observer));
+					}
+					
+				}
+				
+				else if(!((MinJenkinsJob)parsedResults.get(((CommitItem)observer).getMergedBranchName())).getJenkinsResult().equals("null"))
+				{// if we are here we already have a build number
+					relevantObservers.add(observer);
+				}
+			
+			}
+			catch (NullPointerException e){ //means that the update didn't get details of the new create.
+				continue;
+			} catch (NumberFormatException e) {
+				VerigreenLogger.get().error(
+	                    getClass().getName(),
+	                    RuntimeUtils.getCurrentMethodName(),
+	                    String.format(
+	                            "Illegal character in build number: [%s]",
+	                            Integer.parseInt(parsedResults.get(((CommitItem)observer).getMergedBranchName()).getBuildNumber())),
+	                    e);
+			} catch (URISyntaxException e) {
+				VerigreenLogger.get().error(
+	                    getClass().getName(),
+	                    RuntimeUtils.getCurrentMethodName(),
+	                    String.format(
+	                            "Illegal character in build URL: [%s]",
+	                            JenkinsVerifier.getBuildUrl(Integer.parseInt(parsedResults.get(((CommitItem)observer).getMergedBranchName()).getBuildNumber()))),
+	                    e);
 			}
 		}
+		VerigreenLogger.get().log(getClass().getName(), RuntimeUtils.getCurrentMethodName(), " - Method ended");
 		return relevantObservers;
 	}
 }
