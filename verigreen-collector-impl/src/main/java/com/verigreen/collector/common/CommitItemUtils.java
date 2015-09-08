@@ -66,7 +66,7 @@ public class CommitItemUtils {
         
         return ret;
     }
-    
+        
     public static Collection<CommitItem> getRunning() {
         
         List<CommitItem> ret =
