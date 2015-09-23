@@ -24,56 +24,6 @@ public class JenkinsVerifierMockFactory {
         
         return _buildVerifier;
     }
-    
-/*    public static void setPassedMock() {
-        
-        setMock(VerificationStatus.PASSED);
-    }
-    
-    public static void setFailedMock() {
-        
-        setMock(VerificationStatus.FAILED);
-    }
-    
-/*    public static void setHangMock() {
-        
-        reset();
-        EasyMock.expect(
-                _buildVerifier.BuildAndVerify(
-                        EasyMock.anyString(),
-                        EasyMock.anyString(),
-                        EasyMock.anyString(),
-                        EasyMock.anyObject(BuildDataCallback.class))).andAnswer(
-                new IAnswer<BuildVerificationResult>() {
-                    
-                    @Override
-                    public BuildVerificationResult answer() throws Throwable {
-                        
-                        Thread.sleep(400);
-                        
-                        return null;
-                    }
-                });
-        replay();
-    }
-    
-    private static void setMock(VerificationStatus status) {
-        
-        reset();
-        try {
-            EasyMock.expect(
-                    _buildVerifier.BuildAndVerify(
-                            EasyMock.anyString(),
-                            EasyMock.anyString(),
-                            EasyMock.anyString(),
-                            EasyMock.anyObject(BuildDataCallback.class))).andReturn(
-                    new BuildVerificationResult(100, new URI(url), status)).atLeastOnce();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-        replay();
-    }
-    */
 
     public static void replay() {
         

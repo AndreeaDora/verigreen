@@ -36,45 +36,6 @@ import com.verigreen.common.testcase.IntegrationTest;
 @Category(IntegrationTest.class)
 @Ignore
 public class TestJenkinsVerifier extends CollectorSpringTestCase {
-    
-
-   /* @Test
-    public void testBuildAndVerify() {
-        
-        final BuildVerifier jenkinsVerifier = CollectorApi.getJenkinsVerifier();
-        int nThreads = 4;
-        
-        ExecutorService executerService = Executors.newFixedThreadPool(nThreads);
-        List<Future<BuildVerificationResult>> results =
-                new ArrayList<Future<BuildVerificationResult>>();
-        for (int i = 0; i < nThreads; i++) {
-            Future<BuildVerificationResult> result =
-                    executerService.submit(new Callable<BuildVerificationResult>() {
-                        
-                        @Override
-                        public BuildVerificationResult call() throws Exception {
-                            
-                            BuildVerificationResult buildResult =
-                                    jenkinsVerifier.BuildAndVerify(
-                                            "testing-jenkins-api",
-                                            "ParamForTesting",
-                                            UUID.randomUUID().toString(),
-                                            null);
-                            
-                            return buildResult;
-                        }
-                    });
-            results.add(result);
-        }
-        for (Future<BuildVerificationResult> buildResult : results) {
-            try {
-                BuildVerificationResult result = buildResult.get();
-                Assert.assertEquals(VerificationStatus.PASSED, result.getStatus());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }*/
 	
     @Test
     public void testBuild() throws IOException {
