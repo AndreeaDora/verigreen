@@ -505,7 +505,7 @@ app.controller('ModalController', [ '$scope', '$http', 'close',
 					$scope.items = data;
 					$scope.close();
 				}).error(function(data) {
-					alert('The password is incorrect!');
+					$scope.message = 'The password is incorrect!';
 				});
 			};
 
