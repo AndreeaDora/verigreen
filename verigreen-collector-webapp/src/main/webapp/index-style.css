@@ -271,3 +271,8 @@
 			.pagination ul>li:first-child>a,.pagination ul>li:first-child>span {
 				border-left-width:1px;
 			}
+			.error {
+				border: 0px;
+				padding-left: 10px;
+				color: red;
+			}

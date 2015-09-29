@@ -21,7 +21,7 @@
                 <h4 class="modal-title">Force Push</h4>
               </div>
               <div class="modal-body">
-               Password : <input name="password" type="password" required ng-model="data.password" ng-focus="open">
+               Password : <input name="password" type="password" required ng-model="data.password" ng-focus="open" ng-keyup="errorMessage(data.password.length)"><input class="error" ng-model="message"></input>
               </div>
               <div class="modal-footer">
   				 <button type="submit"  ng-click="checkPassword(data)" ng-enter="checkPassword(data)" class="btn btn-default" ng-disabled="!data.password.length" >OK</button>
