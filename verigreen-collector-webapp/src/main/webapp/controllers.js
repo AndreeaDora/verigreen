@@ -135,6 +135,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 			});
 			$scope.search();
 		}).error(function(data) {
+			console.error("Commit-items data not available!");
 		});
 	};
 	
@@ -351,6 +352,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 	        }).success(function(data) {
 	               $scope.items = data;
 	        }).error(function(data) {
+	        	console.error("Connection refused!");
 	        });
 	 };
 	  
@@ -373,6 +375,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
                         	});
                         });
               }).error(function(data) {
+            	  console.error("History data not available!");
               });
 	  };
 	  
@@ -444,6 +447,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 	              }).success(function(data) {
 	            	  $scope.displayMode = data;
 	              }).error(function(data) {
+	            	  console.error("Data not available!");
 	              });
 	       }; 
 	                                                                  	
@@ -460,6 +464,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 		}).success(function(data) {
 			$scope.messages = data;
 		}).error(function(data) {
+			console.error("Commit-message data not available!");
 		});
 	};
 	
