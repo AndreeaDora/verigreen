@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.verigreen.collector.api.VerificationStatus;
 import com.verigreen.collector.common.CommitItemUtils;
 import com.verigreen.collector.common.log4j.VerigreenLogger;
 import com.verigreen.collector.decision.Decision;
@@ -30,8 +31,20 @@ public class ProtectedBranchesDecisionMaker {
     public Collection<List<Decision>> decide() {
         
         Collection<List<Decision>> ret = new ArrayList<>();
+        CommitItem item;
         try {
+        	ArrayList<CommitItem> notStarted = new ArrayList<CommitItem>(CommitItemUtils.filterItems(CommitItemUtils.getNotDone(), VerificationStatus.NOT_STARTED));
+        	
             Collection<CommitItem> notDone = CommitItemUtils.getNotDone();
+           
+            notDone.removeAll(notStarted);
+            
+            while(notDone.size()<3 && !notStarted.isEmpty()) {
+                item = notStarted.iterator().next();
+                notDone.add(item);
+                notStarted.remove(item);
+              }
+            
             VerigreenLogger.get().log(
                     getClass().getName(),
                     RuntimeUtils.getCurrentMethodName(),
