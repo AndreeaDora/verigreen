@@ -135,7 +135,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 			});
 			$scope.search();
 		}).error(function(data) {
-			alert('err');
+			console.error("Commit-items data not available!");
 		});
 	};
 	
@@ -352,7 +352,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 	        }).success(function(data) {
 	               $scope.items = data;
 	        }).error(function(data) {
-	               alert('err');
+	        	console.error("Connection refused!");
 	        });
 	 };
 	  
@@ -375,7 +375,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
                         	});
                         });
               }).error(function(data) {
-                        alert('err');
+            	  console.error("History data not available!");
               });
 	  };
 	  
@@ -447,7 +447,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 	              }).success(function(data) {
 	            	  $scope.displayMode = data;
 	              }).error(function(data) {
-	            	  alert('err');
+	            	  console.error("Data not available!");
 	              });
 	       }; 
 	                                                                  	
@@ -464,7 +464,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 		}).success(function(data) {
 			$scope.messages = data;
 		}).error(function(data) {
-			alert('err');
+			console.error("Commit-message data not available!");
 		});
 	};
 	
@@ -484,11 +484,12 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 app.controller('ModalController', [ '$scope', '$http', 'close',
 		'sharedProperty', function($scope, $http, close, sharedProperty) {
 			$scope.open = true;
+			$scope.message = "";
 			$scope.close = function() {
 				close(500); // close, but give 500ms for bootstrap to animate
 				$scope.open = false;
 			};
-
+			
 			$scope.checkPassword = function(password) {
 				$scope.branchDescriptor = sharedProperty.getbranchDescriptor();
 				$http({
@@ -505,8 +506,14 @@ app.controller('ModalController', [ '$scope', '$http', 'close',
 					$scope.items = data;
 					$scope.close();
 				}).error(function(data) {
-					alert('The password is incorrect!');
+					$scope.message = 'The password is incorrect!';
 				});
+			};
+			
+			$scope.errorMessage = function(password) {
+				if(!password) {
+					$scope.message = "";
+				}
 			};
 
 		} ]);
