@@ -10,9 +10,9 @@
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and limitations under the License.
  *******************************************************************************/
-var app = angular.module('App', ['ngCookies','angularModalService']);
-app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedProperty', '$cookies', '$interval', '$cookieStore',
-   function ($scope, $filter, $http, ModalService, sharedProperty, $cookies, $interval, $cookieStore) {
+var app = angular.module('App', ['ngCookies']);
+app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cookies', '$interval', '$cookieStore',
+   function ($scope, $filter, $http, sharedProperty, $cookies, $interval, $cookieStore) {
 
 	// init
 	$scope.sortingOrder = sortingOrder;
@@ -31,6 +31,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 	$scope.time = "30";
 	$scope.checklist = true;
 	$scope.color = "#ffffff";
+	$scope.modalShown = false;
 	
 	$scope.getValueFilter = function(column) {
 		if($cookieStore.get(column) == true) {
@@ -144,7 +145,8 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 			$scope.branchDescriptor = sharedProperty.setbranchDescriptor(committer,protectedBranch,branchId,commitId);
 			$scope.menuOptions = [
 			                       ['Force push', function () {
-			                    	   showModalWindow();
+			                    	   //showModalWindow();
+			                    	   $scope.modalShown = true;
 			                       }]
 			                   ];
 		}
@@ -153,7 +155,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 		}
 	};
 	
-	function showModalWindow() {
+/*	function showModalWindow() {
 		    ModalService.showModal({
 		      templateUrl: "modal.html",
 		      controller: "ModalController",
@@ -162,7 +164,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 		      modal.close();
 		    });
 	};
-
+*/
 	var searchMatch = function(haystack, needle) {
 
 		if (!needle) {
@@ -478,10 +480,34 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'ModalService', 'sharedP
 		}
 	};
 
+	$scope.checkPassword = function(password) {
+		$scope.branchDescriptor = sharedProperty.getbranchDescriptor();
+		$http({
+			url : "rest/branches",
+			method : "POST",
+			dataType : "json",
+			data : $scope.branchDescriptor,
+			params : password,
+			headers : {
+				"Content-Type" : "application/json; charset=utf-8",
+				"Accept" : "application/json"
+			}
+		}).success(function(data) {
+			$scope.items = data;
+			$scope.cancel();
+		}).error(function(data) {
+			alert('The password is incorrect!');
+		});
+	};
+	
+	$scope.cancel = function () {
+		$scope.modalShown = false;
+	};
+
 }
 ]);
 
-app.controller('ModalController', [ '$scope', '$http', 'close',
+/*app.controller('ModalController', [ '$scope', '$http', 'close',
 		'sharedProperty', function($scope, $http, close, sharedProperty) {
 			$scope.open = true;
 			$scope.close = function() {
@@ -509,4 +535,4 @@ app.controller('ModalController', [ '$scope', '$http', 'close',
 				});
 			};
 
-		} ]);
+		} ]);*/
