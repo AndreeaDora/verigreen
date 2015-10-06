@@ -142,6 +142,6 @@ app.directive('modalDialog', function() {
 	        scope.show = false;
 	      };
 	    },
-	    template: "<div ng-show='show'><div class='modal-overlay' ng-click='hideModal()'></div><div class='modal-dialog' ng-style='dialogStyle'><div class='close' ng-click='hideModal()'>&times;</div><div class='content' ng-transclude></div></div></div>"
+	    template: "<div ng-show='show' class='modal-overlay'><div ng-click='hideModal()'></div><div class='modal-dialog' ng-style='dialogStyle'><div class='close' ng-click='hideModal()'>&times;</div><div class='content' ng-transclude></div></div></div>"
 	  };
 	});

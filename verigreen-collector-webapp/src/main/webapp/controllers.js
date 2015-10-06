@@ -31,7 +31,8 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 	$scope.time = "30";
 	$scope.checklist = true;
 	$scope.color = "#ffffff";
-	$scope.modalShown = false;
+	$scope.message = "";
+	$scope.showModal = false;
 	
 	$scope.getValueFilter = function(column) {
 		if($cookieStore.get(column) == true) {
@@ -136,7 +137,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 			});
 			$scope.search();
 		}).error(function(data) {
-			alert('err');
+			console.error("Commit-items data not available!");
 		});
 	};
 	
@@ -145,8 +146,9 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 			$scope.branchDescriptor = sharedProperty.setbranchDescriptor(committer,protectedBranch,branchId,commitId);
 			$scope.menuOptions = [
 			                       ['Force push', function () {
-			                    	   //showModalWindow();
-			                    	   $scope.modalShown = true;
+			                    	   $scope.message = "";
+			                    	   $scope.data = {password:""};
+			                    	   $scope.showModal = true;
 			                       }]
 			                   ];
 		}
@@ -154,17 +156,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 			$scope.menuOptions = null;
 		}
 	};
-	
-/*	function showModalWindow() {
-		    ModalService.showModal({
-		      templateUrl: "modal.html",
-		      controller: "ModalController",
-		    }).then(function(modal) {
-		      modal.element.modal();
-		      modal.close();
-		    });
-	};
-*/
+
 	var searchMatch = function(haystack, needle) {
 
 		if (!needle) {
@@ -354,7 +346,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 	        }).success(function(data) {
 	               $scope.items = data;
 	        }).error(function(data) {
-	               alert('err');
+	        	console.error("Connection refused!");
 	        });
 	 };
 	  
@@ -377,7 +369,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
                         	});
                         });
               }).error(function(data) {
-                        alert('err');
+            	  console.error("History data not available!");
               });
 	  };
 	  
@@ -449,7 +441,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 	              }).success(function(data) {
 	            	  $scope.displayMode = data;
 	              }).error(function(data) {
-	            	  alert('err');
+	            	  console.error("Data not available!");
 	              });
 	       }; 
 	                                                                  	
@@ -466,7 +458,7 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 		}).success(function(data) {
 			$scope.messages = data;
 		}).error(function(data) {
-			alert('err');
+			console.error("Commit-message data not available!");
 		});
 	};
 	
@@ -496,43 +488,19 @@ app.controller('ctrlRead', ['$scope','$filter','$http', 'sharedProperty', '$cook
 			$scope.items = data;
 			$scope.cancel();
 		}).error(function(data) {
-			alert('The password is incorrect!');
+			$scope.message = 'The password is incorrect!';
 		});
 	};
 	
 	$scope.cancel = function () {
-		$scope.modalShown = false;
+		$scope.showModal = false;
 	};
-
+	
+	$scope.errorMessage = function(password) {
+		if(!password) {
+			$scope.message = "";
+		}
+	};
+	
 }
 ]);
-
-/*app.controller('ModalController', [ '$scope', '$http', 'close',
-		'sharedProperty', function($scope, $http, close, sharedProperty) {
-			$scope.open = true;
-			$scope.close = function() {
-				close(500); // close, but give 500ms for bootstrap to animate
-				$scope.open = false;
-			};
-
-			$scope.checkPassword = function(password) {
-				$scope.branchDescriptor = sharedProperty.getbranchDescriptor();
-				$http({
-					url : "rest/branches",
-					method : "POST",
-					dataType : "json",
-					data : $scope.branchDescriptor,
-					params : password,
-					headers : {
-						"Content-Type" : "application/json; charset=utf-8",
-						"Accept" : "application/json"
-					}
-				}).success(function(data) {
-					$scope.items = data;
-					$scope.close();
-				}).error(function(data) {
-					alert('The password is incorrect!');
-				});
-			};
-
-		} ]);*/

@@ -68,13 +68,13 @@
   				<span ng-show="check"><input type="text" class="time" name="time" ng-pattern="number" ng-model="time" ng-enter="changeTime(form.time.$valid)" ng-keyup="blurAfterEnter($event)" /><span style="margin-left:7px;">Seconds</span></span>
   			</form>
   			</div>
-			<modal-dialog show="modalShown">
+			<modal-dialog show="showModal">
 			 	<form name="form">
 			              <div class="modal-header">
 			                <h4 class="modal-title">Force Push</h4>
 			              </div>
 			              <div class="modal-body">
-			               Password : <input name="password" type="password" required ng-model="data.password" ng-focus="modalShown">
+			               Password : <input name="password" type="password" required ng-model="data.password" ng-focus="showModal" ng-keyup="errorMessage(data.password.length)"><input class="error" ng-model="message" disabled></input>
 			              </div>
 			              <div class="modal-footer">
 			  				 <button type="submit"  ng-click="checkPassword(data)" ng-enter="checkPassword(data)" class="btn btn-default" ng-disabled="!data.password.length" >OK</button>
