@@ -66,9 +66,16 @@ public class DecisionMakerNotStartedItems {
     private CommitItem getParent(Collection<CommitItem> items, CommitItem first) {
         
         CommitItem ret = null;
+        ArrayList<CommitItem> newCollection = new ArrayList<CommitItem>(items);
+        int collectionSize = newCollection.size();
         for (CommitItem currItem : items) {
-            if (currItem.equals(first)) {
-                break;
+        	if(collectionSize!= 0) {
+            	if (currItem.equals(first) && newCollection.get(collectionSize-1).getStatus().equals(VerificationStatus.RUNNING) || newCollection.get(collectionSize-1).getStatus().equals(VerificationStatus.PASSED)) {
+            		ret = newCollection.get(collectionSize-1);
+                } 
+        	}
+            if(currItem.equals(first)) {
+            	break;
             }
             if (currItem.getStatus().equals(VerificationStatus.PASSED)
                 || currItem.getStatus().equals(VerificationStatus.RUNNING)) {
@@ -78,4 +85,5 @@ public class DecisionMakerNotStartedItems {
         
         return ret;
     }
+       
 }
