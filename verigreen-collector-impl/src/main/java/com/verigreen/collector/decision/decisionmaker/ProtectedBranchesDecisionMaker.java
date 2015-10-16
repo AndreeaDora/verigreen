@@ -20,6 +20,7 @@ import java.util.Map;
 
 import com.verigreen.collector.api.VerificationStatus;
 import com.verigreen.collector.common.CommitItemUtils;
+import com.verigreen.collector.common.VerigreenNeededLogic;
 import com.verigreen.collector.common.log4j.VerigreenLogger;
 import com.verigreen.collector.decision.Decision;
 import com.verigreen.collector.model.CommitItem;
@@ -27,6 +28,8 @@ import com.verigreen.common.concurrency.RuntimeUtils;
 import com.verigreen.common.utils.CollectionUtils;
 
 public class ProtectedBranchesDecisionMaker {
+	
+	private int numberCommits = Integer.parseInt(VerigreenNeededLogic.properties.getProperty("number.commits"));
     
     public Collection<List<Decision>> decide() {
         
@@ -39,7 +42,7 @@ public class ProtectedBranchesDecisionMaker {
            
             notDone.removeAll(notStarted);
             
-            while(notDone.size()<3 && !notStarted.isEmpty()) {
+            while(notDone.size()<numberCommits && !notStarted.isEmpty()) {
                 item = notStarted.iterator().next();
                 notDone.add(item);
                 notStarted.remove(item);
