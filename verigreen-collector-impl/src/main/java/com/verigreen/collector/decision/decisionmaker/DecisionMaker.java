@@ -26,6 +26,7 @@ public class DecisionMaker {
         
         List<Decision> ret = new ArrayList<>();
         ret.addAll(new DecisionMakerPassedItems().execute(items));
+        CommitItemUtils.refreshItems(items);
         Collection<CommitItem> notDone = CommitItemUtils.filterNotDone(items);
         ret.addAll(new DecisionMakerFailedItems().execute(notDone));
         ret.addAll(new DecisionMakerNotStartedItems().execute(notDone));
